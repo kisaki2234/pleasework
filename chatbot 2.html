@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Support Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .chat-box {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .message {
+            margin: 10px 0;
+            padding: 10px 15px;
+            border-radius: 20px;
+            max-width: 70%;
+        }
+
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+
+        .bot-message {
+            background-color: #e9ecef;
+            color: black;
+            margin-right: auto;
+        }
+
+        .input-container {
+            display: flex;
+            padding: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-box" id="chat-box"></div>
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const responses = {
+            greetings: {
+                keywords: ['hello', 'hi', 'hey', 'good morning', 'good afternoon'],
+                replies: [
+                    "Hello! Welcome to MIRACLE DANIEL Company. How can I assist you today?",
+                    "Hi there! How can I help you with your query?",
+                    "Welcome to MIRACLE DANIEL support! What can I do for you?"
+                ]
+            },
+            account: {
+                keywords: ['account', 'login', 'password', 'username'],
+                replies: [
+                    "For account issues, you can reset your password using our 'Forgot Password' feature on the login page.",
+                    "If you're having trouble accessing your account, please visit our account recovery page.",
+                    "Account-related queries can be resolved through our customer portal at help.miracledaniel.com/account"
+                ]
+            },
+            payments: {
+                keywords: ['payment', 'invoice', 'bill', 'charge', 'refund'],
+                replies: [
+                    "Payment issues can be directed to our billing department at billing@miracledaniel.com.",
+                    "For invoice inquiries, please provide your order number and we'll check the status.",
+                    "Refund requests typically take 5-7 business days to process after approval."
+                ]
+            },
+            technical: {
+                keywords: ['error', 'not working', 'bug', 'technical', 'issue'],
+                replies: [
+                    "Please try clearing your browser cache and reloading the page.",
+                    "Our technical team is aware of this issue and working on a fix. Thank you for your patience.",
+                    "For technical support, please contact support@miracledaniel.com with screenshots of the problem."
+                ]
+            },
+            contact: {
+                keywords: ['contact', 'speak to someone', 'agent', 'representative'],
+                replies: [
+                    "You can reach our customer service team at +2347036398608.",
+                    "Live chat with an agent is available Mon-Fri 9am-5pm EST.",
+                    "Email us at support@miracledaniel.com and we'll respond within 24 hours."
+                ]
+            },
+            returns: {
+                keywords: ['return', 'exchange', 'warranty', 'defective'],
+                replies: [
+                    "Returns can be initiated through your account portal within 30 days of purchase.",
+                    "Please review our return policy at miracledaniel.com/returns for instructions.",
+                    "For defective items, contact returns@miracledaniel.com with your order number."
+                ]
+            },
+            privacy: {
+                keywords: ['privacy', 'data', 'security', 'gdpr'],
+                replies: [
+                    "Our privacy policy is available at miracledaniel.com/privacy.",
+                    "We take data security seriously. All personal information is encrypted.",
+                    "For data deletion requests, please email privacy@miracledaniel.com."
+                ]
+            },
+            farewell: {
+                keywords: ['bye', 'goodbye', 'see you', 'later', 'thanks' , "thank you"],
+                replies: [
+                    "Thank you for contacting MIRACLE DANIEL Support! Have a great day!",
+                    "Goodbye! Don't hesitate to reach out if you need more help.",
+                    "Happy to assist! Come back anytime you have questions."
+                ]
+            },
+            default: [
+                "I'm sorry, I didn't understand that. Could you rephrase your question?",
+                "Let me connect you to a human agent for further assistance. Please hold...",
+                "For more complex queries, please visit our help center at help.miracledaniel.com"
+            ]
+        };
+
+        function addMessage(message, isUser = false) {
+            const chatBox = document.getElementById('chat-box');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            messageDiv.textContent = message;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function getResponse(input) {
+            const lowerInput = input.toLowerCase();
+            
+            
+            if (lowerInput.includes('your name')) {
+                return "I'm MIRACLE DANIELS Company's virtual assistant. How can I help you?";
+            }
+
+            
+            for (const category in responses) {
+                if (category !== 'default' && 
+                    responses[category].keywords.some(keyword => lowerInput.includes(keyword))) {
+                    const replies = responses[category].replies;
+                    return replies[Math.floor(Math.random() * replies.length)];
+                }
+            }
+
+            
+            return responses.default[Math.floor(Math.random() * responses.default.length)];
+        }
+
+        function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const message = userInput.value.trim();
+            
+            if (message) {
+                addMessage(message, true);
+                const response = getResponse(message);
+                setTimeout(() => addMessage(response), 500);
+                userInput.value = '';
+            }
+        }
+
+        
+        document.getElementById('user-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+       
+        window.onload = () => {
+            setTimeout(() => {
+                addMessage("Welcome to MIRACLE DANIELS Company Support! How can I help you today?");
+            }, 500);
+        };
+    </script>
+</body>
+</html>
