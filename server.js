@@ -1,31 +1,51 @@
-// to load the environment variables from the .env file
+// Load environment variables from the .env file
 require('dotenv').config();
 
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const winston = require('winston'); // For logging
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Allows dynamic port assignment
 
-// when Configuring winston for logging
+// Ensure logs directory exists
+const logsDir = path.join(__dirname, 'logs');
+if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir);
+}
+
+// Configure Winston for logging
 const logger = winston.createLogger({
     level: 'info',
-    format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
+    format: winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.colorize(),
+        winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`)
+    ),
     transports: [
         new winston.transports.Console(),
-        new winston.transports.File({ filename: 'logs/server.log' })
+        new winston.transports.File({ filename: path.join(logsDir, 'server.log') })
     ]
 });
 
-// The middleware setups 
+// Log the current date for debugging purposes
+logger.info(`Server started on: ${new Date().toLocaleString()}`);
+
+// Middleware setup
 app.use(express.json()); // Parse JSON request bodies
 app.use(cors()); // Enable cross-origin requests
 app.use(express.static(path.join(__dirname, 'public'))); // Serve static files from 'public' folder
 
-// The openRouter.ai Chat API Route
+// Ensure public/index.html exists
+const indexPath = path.join(__dirname, 'public', 'index.html');
+if (!fs.existsSync(indexPath)) {
+    logger.warn("⚠️ Warning: 'public/index.html' not found. Ensure your frontend files are placed correctly.");
+}
+
+// OpenRouter.ai Chat API Route
 app.post('/chat', async (req, res) => {
     const userMessage = req.body?.message;
 
@@ -52,6 +72,11 @@ app.post('/chat', async (req, res) => {
             }
         );
 
+        // Validate response
+        if (!response.data || !response.data.choices || response.data.choices.length === 0) {
+            throw new Error('Invalid response from OpenRouter API');
+        }
+
         res.json({ reply: response.data.choices[0].message.content });
     } catch (error) {
         logger.error(`Error connecting to OpenRouter: ${error.response?.data || error.message}`);
@@ -59,7 +84,7 @@ app.post('/chat', async (req, res) => {
     }
 });
 
-// Web search API Route (i used serpAPI)
+// Web search API Route (SerpAPI)
 app.post('/search', async (req, res) => {
     const query = req.body?.query;
 
@@ -88,7 +113,17 @@ app.post('/search', async (req, res) => {
 
 // Serve the frontend index.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(500).json({ error: "Frontend is missing. Please ensure 'public/index.html' is uploaded." });
+    }
+});
+
+// Error handling middleware (for unhandled errors)
+app.use((err, req, res, next) => {
+    logger.error(`Unhandled error: ${err.message}`);
+    res.status(500).json({ error: 'Something went wrong. Please try again later.' });
 });
 
 // Default route for unhandled paths
@@ -96,13 +131,7 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found. Please use /chat or /search' });
 });
 
-// Basic error handler (for unhandled errors)
-app.use((err, req, res, next) => {
-    logger.error(`Unhandled error: ${err.message}`);
-    res.status(500).json({ error: 'Something went wrong. Please try again later.' });
-});
-
-// Finnally start the server🙂
+// Start the server
 app.listen(PORT, () => {
-    logger.info(`Active Server running on http://localhost:${PORT}`);
+    logger.info(`✅ Server running on http://localhost:${PORT}`);
 });

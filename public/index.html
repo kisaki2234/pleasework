@@ -63,7 +63,7 @@
             letter-spacing: 1px;
         }
 
-        /* some Chat Container Styles */
+        /* Chat Container Styles */
         .chat-container {
             max-width: 800px;
             margin: 20px auto;
@@ -125,7 +125,48 @@
             transition: background-color 0.3s ease;
         }
 
-        /* Some Theme Toggle Styles */
+        /* History Panel Styles */
+        .history-panel {
+            position: fixed;
+            left: 20px;
+            top: 100px;
+            width: 250px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            max-height: 70vh;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .history-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f5f5f5;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .history-item:hover {
+            background: #e0e0e0;
+        }
+
+        .history-toggle {
+            position: fixed;
+            left: 20px;
+            top: 70px;
+            padding: 8px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        /* Theme Toggle Styles */
         .theme-toggle {
             position: fixed;
             top: 1rem;
@@ -145,7 +186,7 @@
             fill: var(--text-color);
         }
 
-        /* Some Contact & Prompt Styles */
+        /* Contact & Prompt Styles */
         .contact-footer {
             position: fixed;
             bottom: 20px;
@@ -222,6 +263,11 @@
                 left: 10px;
                 font-size: 12px;
             }
+            
+            .history-panel {
+                width: 200px;
+                left: 10px;
+            }
         }
     </style>
 </head>
@@ -232,6 +278,12 @@
             <h1 class="quest-text">QUEST</h1>
         </div>
     </header>
+
+    <button class="history-toggle" onclick="toggleHistory()">Chat History</button>
+    <div class="history-panel" id="historyPanel">
+        <div id="historyList"></div>
+        <button onclick="clearHistory()" style="margin-top: 10px;">Clear History</button>
+    </div>
 
     <button class="theme-toggle" aria-label="Toggle theme">
         <svg class="toggle-icon" viewBox="0 0 24 24">
@@ -265,7 +317,7 @@
     </div>
 
     <script>
-        // Theme Toggle Logics
+        // Theme Toggle Logic
         const themeToggle = document.querySelector('.theme-toggle');
         const sunIcon = document.querySelector('#sun');
         const moonIcon = document.querySelector('#moon');
@@ -279,7 +331,7 @@
             localStorage.setItem('theme', isDark ? 'light' : 'dark');
         }
 
-        // Initializing Theme
+        // Initialize Theme
         const savedTheme = localStorage.getItem('theme') || 'light';
         body.setAttribute('data-theme', savedTheme);
         sunIcon.style.display = savedTheme === 'light' ? 'block' : 'none';
@@ -288,7 +340,57 @@
         themeToggle.addEventListener('click', toggleTheme);
         themeToggle.addEventListener('touchend', toggleTheme);
 
-        // Some Chatbot Logic
+        // Chat History System
+        let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
+        let messageCount = 0;
+
+        function saveToHistory(userMessage, botMessage) {
+            const chatEntry = {
+                timestamp: new Date().toISOString(),
+                user: userMessage,
+                bot: botMessage
+            };
+            
+            chatHistory.push(chatEntry);
+            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            updateHistoryPanel();
+        }
+
+        function updateHistoryPanel() {
+            const historyList = document.getElementById('historyList');
+            historyList.innerHTML = chatHistory
+                .map((entry, index) => `
+                    <div class="history-item" onclick="loadHistory(${index})">
+                        <small>${new Date(entry.timestamp).toLocaleString()}</small><br>
+                        ${entry.user.substring(0, 30)}...
+                    </div>
+                `).join('');
+        }
+
+        function loadHistory(index) {
+            const entry = chatHistory[index];
+            const chatBox = document.getElementById('chat-box');
+            
+            // Clear current chat
+            chatBox.innerHTML = '';
+            
+            // Load history messages
+            addMessage(entry.user, true);
+            addMessage(entry.bot, false);
+        }
+
+        function toggleHistory() {
+            const panel = document.getElementById('historyPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function clearHistory() {
+            localStorage.removeItem('chatHistory');
+            chatHistory = [];
+            updateHistoryPanel();
+        }
+
+        // Chatbot Logic
         const responses = {
             greetings: {
                 keywords: ['hello', 'hi', 'hey', 'good morning', 'good afternoon'],
@@ -313,26 +415,28 @@
             ]
         };
 
-        let messageCount = 0;
-
         async function sendMessage() {
             const userInput = document.getElementById('user-input');
             const message = userInput.value.trim();
             if (!message) return;
-            
+
+            // Store user message
             addMessage(message, true);
             userInput.value = '';
 
+            // Get bot response
             let response = getPredefinedResponse(message);
             if (!response) {
-                response = message.toLowerCase().includes('search') 
-                    ? await fetchSearchResults(message)
-                    : await fetchChatGPTResponse(message);
+                response = await (message.toLowerCase().includes('search') 
+                    ? fetchSearchResults(message)
+                    : fetchChatGPTResponse(message));
             }
-            
+
+            // Store bot response
             addMessage(response, false);
-            
-            // I Hide this prompt after first message
+            saveToHistory(message, response);
+
+            // Hide prompt after first message
             if (messageCount++ === 0) {
                 document.getElementById('helloPrompt').style.display = 'none';
             }
@@ -387,7 +491,7 @@
             }
         }
 
-        //  Listeners
+        // Event Listeners
         document.getElementById('user-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
@@ -395,6 +499,9 @@
         document.getElementById('user-input').addEventListener('input', function() {
             document.getElementById('helloPrompt').style.opacity = this.value.length > 0 ? '0.5' : '1';
         });
+
+        // Initialize history panel
+        document.addEventListener('DOMContentLoaded', updateHistoryPanel);
     </script>
 </body>
 </html>
