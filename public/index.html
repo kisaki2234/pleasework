@@ -423,6 +423,47 @@
 
             return null;
         }
+        // Add these 3 functions BEFORE sendMessage()
+function addMessage(message, isUser) {
+    const chatBox = document.getElementById('chat-box');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+    messageDiv.textContent = message;
+    chatBox.appendChild(messageDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function fetchChatGPTResponse(message) {
+    try {
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+        });
+        if (!response.ok) throw new Error('API Error');
+        const data = await response.json();
+        return data.reply || "I'm sorry, I couldn't process that request.";
+    } catch (error) {
+        return "Error connecting to chatbot service.";
+    }
+}
+
+async function fetchSearchResults(query) {
+    try {
+        const response = await fetch('/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query })
+        });
+        if (!response.ok) throw new Error('API Error');
+        const data = await response.json();
+        return data.results?.length > 0 
+            ? data.results.slice(0, 3).map(item => `${item.title}: ${item.link}`).join('\n')
+            : "No relevant results found.";
+    } catch (error) {
+        return "Error performing web search.";
+    }
+}
         async function sendMessage() {
             const userInput = document.getElementById('user-input');
             const sendButton = document.getElementById('sendButton');

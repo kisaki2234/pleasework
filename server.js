@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 
 // Enhanced CORS configuration
 const allowedOrigins = [
-    'https://quest-chatbot.onrender.com', // REPLACE WITH YOUR ACTUAL RENDER URL
+    'https://chatbot-cwg0.onrender.com', // REPLACE WITH YOUR ACTUAL RENDER URL
     'http://localhost:3000'
 ];
 
@@ -22,7 +22,21 @@ app.use(cors({
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
+//rate limiting
+const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // Limit each IP to 100 requests per windowMs
+});
+app.use('/chat', limiter);
+// Https enforcement
+app.enable('trust proxy');
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV === 'production' && !req.secure) {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
 // Logging configuration
 const logsDir = path.join(__dirname, 'logs');
 if (!fs.existsSync(logsDir)) {
@@ -44,6 +58,11 @@ const logger = winston.createLogger({
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Handle client-side routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -75,7 +94,7 @@ app.post('/chat', async (req, res) => {
                 headers: { 
                     'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
                     'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://quest-chatbot.onrender.com', // UPDATE THIS
+                    'HTTP-Referer': 'https://chatbot-cwg0.onrender.com', //
                     'X-Title': 'Quest Support Chatbot'
                 },
                 timeout: 10000
