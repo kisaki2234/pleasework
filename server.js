@@ -6,23 +6,33 @@ const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const winston = require('winston'); // For logging
+const winston = require('winston');
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Allows dynamic port assignment
+const PORT = process.env.PORT || 3000;
 
-// Ensure logs directory exists
+// Enhanced CORS configuration
+const allowedOrigins = [
+    'https://quest-chatbot.onrender.com', // REPLACE WITH YOUR ACTUAL RENDER URL
+    'http://localhost:3000'
+];
+
+app.use(cors({
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Logging configuration
 const logsDir = path.join(__dirname, 'logs');
 if (!fs.existsSync(logsDir)) {
     fs.mkdirSync(logsDir);
 }
 
-// Configure Winston for logging
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
         winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        winston.format.colorize(),
         winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level}]: ${message}`)
     ),
     transports: [
@@ -31,107 +41,95 @@ const logger = winston.createLogger({
     ]
 });
 
-// Log the current date for debugging purposes
-logger.info(`Server started on: ${new Date().toLocaleString()}`);
+// Middleware
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Middleware setup
-app.use(express.json()); // Parse JSON request bodies
-app.use(cors()); // Enable cross-origin requests
-app.use(express.static(path.join(__dirname, 'public'))); // Serve static files from 'public' folder
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'ok',
+        timestamp: new Date().toISOString()
+    });
+});
 
-// Ensure public/index.html exists
-const indexPath = path.join(__dirname, 'public', 'index.html');
-if (!fs.existsSync(indexPath)) {
-    logger.warn("⚠️ Warning: 'public/index.html' not found. Ensure your frontend files are placed correctly.");
-}
-
-// OpenRouter.ai Chat API Route
+// OpenRouter endpoint with required headers
 app.post('/chat', async (req, res) => {
-    const userMessage = req.body?.message;
-
-    if (!userMessage) {
-        return res.status(400).json({ reply: 'Message is required' });
-    }
-
-    if (!process.env.OPENROUTER_API_KEY) {
-        return res.status(500).json({ reply: 'OpenRouter API key is missing in the .env file.' });
-    }
-
     try {
+        const userMessage = req.body?.message;
+        if (!userMessage) return res.status(400).json({ error: 'Message required' });
+
+        if (!process.env.OPENROUTER_API_KEY) {
+            logger.error('OpenRouter API key missing');
+            return res.status(500).json({ error: 'Server configuration error' });
+        }
+
         const response = await axios.post(
             'https://openrouter.ai/api/v1/chat/completions',
             {
                 model: 'deepseek/deepseek-r1:free',
                 messages: [{ role: 'user', content: userMessage }],
+                temperature: 0.7,
             },
             {
                 headers: { 
                     'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                    'Content-Type': 'application/json'
-                }
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://quest-chatbot.onrender.com', // UPDATE THIS
+                    'X-Title': 'Quest Support Chatbot'
+                },
+                timeout: 10000
             }
         );
 
-        // Validate response
-        if (!response.data || !response.data.choices || response.data.choices.length === 0) {
-            throw new Error('Invalid response from OpenRouter API');
+        if (!response?.data?.choices?.[0]?.message?.content) {
+            throw new Error('Invalid OpenRouter response structure');
         }
 
         res.json({ reply: response.data.choices[0].message.content });
+
     } catch (error) {
-        logger.error(`Error connecting to OpenRouter: ${error.response?.data || error.message}`);
-        res.status(500).json({ reply: 'Error connecting to OpenRouter. Please try again later.' });
+        logger.error(`OpenRouter Error: ${error.message}`);
+        res.status(500).json({ 
+            error: error.response?.data?.error?.message || 'Chat service unavailable' 
+        });
     }
 });
 
-// Web search API Route (SerpAPI)
+// Search endpoint
 app.post('/search', async (req, res) => {
-    const query = req.body?.query;
-
-    if (!query) {
-        return res.status(400).json({ results: [], error: 'Query is required' });
-    }
-
-    if (!process.env.SERPAPI_KEY) {
-        return res.status(500).json({ error: 'SerpAPI key is missing in the .env file.' });
-    }
-
     try {
+        const query = req.body?.query;
+        if (!query) return res.status(400).json({ error: 'Query required' });
+
+        if (!process.env.SERPAPI_KEY) {
+            logger.error('SerpAPI key missing');
+            return res.status(500).json({ error: 'Server configuration error' });
+        }
+
         const response = await axios.get('https://serpapi.com/search', {
             params: {
                 q: query,
                 api_key: process.env.SERPAPI_KEY
-            }
+            },
+            timeout: 10000
         });
 
-        res.json({ results: response.data.organic_results });
+        res.json({ results: response.data.organic_results || [] });
+
     } catch (error) {
-        logger.error(`Error performing web search: ${error.response?.data || error.message}`);
-        res.status(500).json({ results: [], error: 'Error performing web search. Please try again later.' });
+        logger.error(`SerpAPI Error: ${error.message}`);
+        res.status(500).json({ error: 'Search service unavailable' });
     }
 });
 
-// Serve the frontend index.html
-app.get('/', (req, res) => {
-    if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-    } else {
-        res.status(500).json({ error: "Frontend is missing. Please ensure 'public/index.html' is uploaded." });
-    }
+// Server binding for Render
+app.listen(PORT, '0.0.0.0', () => {
+    logger.info(`✅ Server running on port ${PORT}`);
 });
 
-// Error handling middleware (for unhandled errors)
+// Error handling
 app.use((err, req, res, next) => {
-    logger.error(`Unhandled error: ${err.message}`);
-    res.status(500).json({ error: 'Something went wrong. Please try again later.' });
-});
-
-// Default route for unhandled paths
-app.use((req, res) => {
-    res.status(404).json({ error: 'Route not found. Please use /chat or /search' });
-});
-
-// Start the server
-app.listen(PORT, () => {
-    logger.info(`✅ Server running on http://localhost:${PORT}`);
+    logger.error(`Unhandled Error: ${err.message}`);
+    res.status(500).json({ error: 'Internal server error' });
 });

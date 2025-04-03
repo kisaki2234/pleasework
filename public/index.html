@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Quest Support Chatbot - AI-powered assistance for all your queries">
     <title>Quest Support Chatbot</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
     <style>
         :root {
             --header-bg: linear-gradient(135deg, #2c3e50, #3498db);
@@ -27,7 +29,6 @@
             min-height: 100vh;
         }
 
-        /* Header Styles */
         .header {
             background: var(--header-bg);
             padding: 1rem;
@@ -63,7 +64,6 @@
             letter-spacing: 1px;
         }
 
-        /* Chat Container Styles */
         .chat-container {
             max-width: 800px;
             margin: 20px auto;
@@ -125,7 +125,6 @@
             transition: background-color 0.3s ease;
         }
 
-        /* History Panel Styles */
         .history-panel {
             position: fixed;
             left: 20px;
@@ -166,7 +165,6 @@
             cursor: pointer;
         }
 
-        /* Theme Toggle Styles */
         .theme-toggle {
             position: fixed;
             top: 1rem;
@@ -186,7 +184,6 @@
             fill: var(--text-color);
         }
 
-        /* Contact & Prompt Styles */
         .contact-footer {
             position: fixed;
             bottom: 20px;
@@ -279,7 +276,7 @@
         </div>
     </header>
 
-    <button class="history-toggle" onclick="toggleHistory()">Chat History</button>
+    <button class="history-toggle" onclick="toggleHistory()" aria-label="Chat history">Chat History</button>
     <div class="history-panel" id="historyPanel">
         <div id="historyList"></div>
         <button onclick="clearHistory()" style="margin-top: 10px;">Clear History</button>
@@ -296,12 +293,12 @@
         <div class="chat-box" id="chat-box"></div>
         <div class="input-container">
             <input type="text" id="user-input" placeholder="Type your message...">
-            <button onclick="sendMessage()">Send</button>
+            <button onclick="sendMessage()" aria-label="Send message" id="sendButton">Send</button>
         </div>
     </div>
 
     <div class="contact-footer">
-        <a href="mailto:emenikechukwuk65@gmail.com">
+        <a href="mailto:support@yourdomain.com">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z"/>
             </svg>
@@ -371,10 +368,8 @@
             const entry = chatHistory[index];
             const chatBox = document.getElementById('chat-box');
             
-            // Clear current chat
             chatBox.innerHTML = '';
             
-            // Load history messages
             addMessage(entry.user, true);
             addMessage(entry.bot, false);
         }
@@ -393,7 +388,6 @@
         // Chatbot Logic
         const responses = {
             greetings: {
-                keywords: ['hello', 'hi', 'hey', 'good morning', 'good afternoon'],
                 replies: [
                     "Hello! Welcome to the Quests. How can I assist you today?",
                     "Hi there! How can I help you with your query?",
@@ -401,7 +395,6 @@
                 ]
             },
             farewell: {
-                keywords: ['bye', 'goodbye', 'see you', 'later', 'thanks', 'thank you'],
                 replies: [
                     "Thank you for contacting the Quests Support! Have a great day!",
                     "Goodbye! Don't hesitate to reach out if you need more help.",
@@ -415,83 +408,58 @@
             ]
         };
 
+        function getPredefinedResponse(input) {
+            const lowerInput = input.toLowerCase().trim();
+            
+            const isGreeting = /^(hello|hi|hey|good morning|good afternoon)/i.test(lowerInput);
+            if (isGreeting) {
+                return responses.greetings.replies[Math.floor(Math.random() * responses.greetings.replies.length)];
+            }
+
+            const isFarewell = /^(bye|goodbye|see you|thanks|thank you)/i.test(lowerInput);
+            if (isFarewell) {
+                return responses.farewell.replies[Math.floor(Math.random() * responses.farewell.replies.length)];
+            }
+
+            return null;
+        }
         async function sendMessage() {
             const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('sendButton');
             const message = userInput.value.trim();
             if (!message) return;
 
-            // Store user message
+            sendButton.disabled = true;
             addMessage(message, true);
             userInput.value = '';
-
-            // Get bot response
-            let response = getPredefinedResponse(message);
-            if (!response) {
-                response = await (message.toLowerCase().includes('search') 
-                    ? fetchSearchResults(message)
-                    : fetchChatGPTResponse(message));
-            }
-
-            // Store bot response
-            addMessage(response, false);
-            saveToHistory(message, response);
-
-            // Hide prompt after first message
-            if (messageCount++ === 0) {
-                document.getElementById('helloPrompt').style.display = 'none';
-            }
-        }
-
-        function addMessage(message, isUser) {
-            const chatBox = document.getElementById('chat-box');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            messageDiv.textContent = message;
-            chatBox.appendChild(messageDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
-        function getPredefinedResponse(input) {
-            const lowerInput = input.toLowerCase();
-            for (const category in responses) {
-                if (category !== 'default' && responses[category].keywords.some(keyword => lowerInput.includes(keyword))) {
-                    return responses[category].replies[Math.floor(Math.random() * responses[category].replies.length)];
+            try {
+                let response = getPredefinedResponse(message);
+                
+                if (!response) {
+                    if (message.toLowerCase().includes('search')) {
+                        response = await fetchSearchResults(message);
+                    } else {
+                        response = await fetchChatGPTResponse(message);
+                    }
                 }
-            }
-            return null;
-        }
 
-        async function fetchChatGPTResponse(message) {
-            try {
-                const response = await fetch('http://localhost:3000/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
-                });
-                const data = await response.json();
-                return data.reply || "I'm sorry, I couldn't process that request.";
+                if (!response) {
+                    response = responses.default[Math.floor(Math.random() * responses.default.length)];
+                }
+
+                addMessage(response, false);
+                saveToHistory(message, response);
+
+                if (messageCount++ === 0) {
+                    document.getElementById('helloPrompt').style.display = 'none';
+                }
             } catch (error) {
-                return "Error connecting to chatbot service.";
+                addMessage("Sorry, I'm having trouble connecting. Please try again.", false);
+            } finally {
+                sendButton.disabled = false;
             }
         }
 
-        async function fetchSearchResults(query) {
-            try {
-                const response = await fetch('http://localhost:3000/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query })
-                });
-                const data = await response.json();
-                return data.results?.length > 0 
-                    ? data.results.slice(0, 3).map(item => `${item.title}: ${item.link}`).join('\n')
-                    : "No relevant results found.";
-            } catch (error) {
-                return "Error performing web search.";
-            }
-        }
-
-        // Event Listeners
         document.getElementById('user-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendMessage();
         });
@@ -500,7 +468,6 @@
             document.getElementById('helloPrompt').style.opacity = this.value.length > 0 ? '0.5' : '1';
         });
 
-        // Initialize history panel
         document.addEventListener('DOMContentLoaded', updateHistoryPanel);
     </script>
 </body>
