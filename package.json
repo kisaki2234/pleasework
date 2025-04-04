@@ -3,28 +3,22 @@
   "version": "1.0.0",
   "description": "Hey there! Welcome to the **Customer Support Chatbot** project. This is a simple, yet powerful, chatbot built to help users with common questions, perform web searches, and interact with an AI assistant powered by OpenRouter. It's made with love using Node.js, Express, and a few cool APIs!",
   "main": "server.js",
-  "dependencies": {
-    "axios": "^1.8.4",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.7",
-    "express": "^4.18.2",
-    "express-rate-limit": "^7.5.0",
-    "follow-redirects": "^1.15.9",
-    "winston": "^3.17.0"
-  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Chukwuka-E/Chatbot.git"
+    "url": "git+https://github.com/kisaki2234/pleasework.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Chukwuka-E/Chatbot/issues"
+    "url": "https://github.com/kisaki2234/pleasework/issues"
   },
-  "homepage": "https://github.com/Chukwuka-E/Chatbot#readme"
+  "homepage": "https://github.com/kisaki2234/pleasework#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
 }
