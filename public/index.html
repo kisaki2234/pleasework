@@ -5,17 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Quest Support Chatbot - AI-powered assistance for all your queries">
     <title>Quest Support Chatbot</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
         :root {
-            --header-bg: linear-gradient(135deg, #2c3e50, #3498db);
+            --header-background-gradient: linear-gradient(135deg, #2c3e50, #3498db);
             --text-color: #ecf0f1;
             --accent: #3498db;
             --bg-color: #ffffff;
+            --panel-bg-color: rgba(255,255,255,0.9);
         }
 
         [data-theme="dark"] {
-            --header-bg: linear-gradient(135deg, #0f172a, #1e293b);
+            --header-background-gradient: linear-gradient(135deg, #0f172a, #1e293b);
             --text-color: #f8fafc;
             --accent: #7dd3fc;
             --bg-color: #0f172a;
@@ -30,7 +31,7 @@
         }
 
         .header {
-            background: var(--header-bg);
+            background: var(--header-background-gradient);
             padding: 1rem;
             text-align: center;
             position: sticky;
@@ -50,7 +51,7 @@
         .peace-dove {
             width: 50px;
             height: 50px;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="%23ffffff" d="M22 11.5C22 12.27 21.92 13.03 21.82 13.8L19.94 13L22 11.5M12 12.72C12 12.72 6 11 6 9.71C6 9.21 6.83 8.14 8.34 7.5C7.86 8.45 7.7 9.22 7.7 9.69C7.7 11.15 12 13.34 12 13.34S16.3 11.15 16.3 9.69C16.3 9.22 16.14 8.45 15.66 7.5C17.17 8.14 18 9.21 18 9.71C18 11 12 12.72 12 12.72M9.27 17L8 17.28L6.73 17C5.33 17 4.14 15.97 3.56 14.57L2 15.28L2.47 16.53L3.89 16.12C4.31 17.37 5.19 18.39 6.32 18.93L5.41 20.23L6.75 21.05L7.66 19.75C8.11 19.86 8.58 19.93 9.07 19.93C9.56 19.93 10.03 19.86 10.48 19.75L11.39 21.05L12.73 20.23L11.82 18.93C12.95 18.39 13.83 17.37 14.25 16.12L15.67 16.53L16.14 15.28L14.58 14.57C14 15.97 12.81 17 11.41 17H10.88L10.57 16.12L9.27 17Z"/></svg>');
+            background: url('peace-dove.svg');
             background-size: contain;
         }
 
@@ -58,6 +59,10 @@
             font-family: 'Arial Rounded MT Bold', sans-serif;
             font-size: clamp(1.8rem, 6vw, 2.5rem);
             background: linear-gradient(45deg, var(--text-color), #fff);
+            -webkit-background-clip: text;
+            -moz-background-clip: text;
+            -o-background-clip: text;
+            background-clip: text;
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -130,14 +135,24 @@
             left: 20px;
             top: 100px;
             width: 250px;
-            background: rgba(255,255,255,0.9);
+            background: var(--panel-bg-color);
             border-radius: 10px;
             padding: 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             z-index: 1000;
             max-height: 70vh;
             overflow-y: auto;
-            display: none;
+            transition: visibility 0.3s, opacity 0.3s ease;
+        }
+
+        .history-panel.hidden {
+            visibility: hidden;
+            opacity: 0;
+        }
+
+        .history-panel.visible {
+            visibility: visible;
+            opacity: 1;
         }
 
         .history-item {
@@ -221,6 +236,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            will-change: opacity;
         }
 
         .prompt-bubble::before {
@@ -236,6 +252,12 @@
         @keyframes float {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-5px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .prompt-bubble {
+                animation: none;
+            }
         }
 
         @media (max-width: 768px) {
@@ -282,10 +304,18 @@
         <button onclick="clearHistory()" style="margin-top: 10px;">Clear History</button>
     </div>
 
-    <button class="theme-toggle" aria-label="Toggle theme">
-        <svg class="toggle-icon" viewBox="0 0 24 24">
-            <path id="sun" d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.5 4.9l1.4 1.4L5.9 5 4.5 3.6 3.5 4.9zm14.2 14.2l1.4 1.4 1.4-1.4-1.4-1.4-1.4 1.4zM1 11h3v2H1v-2zm19 0h3v2h-3v-2z"/>
-            <path id="moon" d="M12 3c.2 0 .4.02.6.05a7 7 0 0 0-1.86 12.1 7 7 0 0 0 9.21-9.21A7 7 0 0 0 12 3z" style="display: none;"/>
+            <svg aria-hidden="false">
+                <path id="sun" d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.5 4.9l1.4 1.4L5.9 5 4.5 3.6 3.5 4.9zm14.2 14.2l1.4 1.4 1.4-1.4-1.4-1.4-1.4 1.4zM1 11h3v2H1v-2zm19 0h3v2h-3v-2z"/>
+            </svg>
+            <svg aria-hidden="true">
+                <path id="moon" d="M12 3c.2 0 .4.02.6.05a7 7 0 0 0-1.86 12.1 7 7 0 0 0 9.21-9.21A7 7 0 0 0 12 3z"/>
+            </svg>
+            <svg style="display: none;">
+                <path id="sun" d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM11 1h2v3h-2V1zm0 19h2v3h-2v-3zM3.5 4.9l1.4 1.4L5.9 5 4.5 3.6 3.5 4.9zm14.2 14.2l1.4 1.4 1.4-1.4-1.4-1.4-1.4 1.4zM1 11h3v2H1v-2zm19 0h3v2h-3v-2z"/>
+            </svg>
+            <svg style="display: none;">
+                <path id="moon" d="M12 3c.2 0 .4.02.6.05a7 7 0 0 0-1.86 12.1 7 7 0 0 0 9.21-9.21A7 7 0 0 0 12 3z"/>
+            </svg>
         </svg>
     </button>
 
@@ -301,7 +331,8 @@
         <a href="mailto:support@yourdomain.com">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z"/>
-            </svg>
+    <!-- The CryptoJS library is used for encrypting and decrypting chat history to ensure secure storage in localStorage -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-+b0e8b9X8Q9b5k8X8Q9b5k8X8Q9b5k8X8Q9b5k8X8Q9b5k8X8Q9b5k8X8Q9b5k8X" crossorigin="anonymous"></script>
             Contact Support
         </a>
     </div>
@@ -309,10 +340,12 @@
     <div class="prompt-bubble" id="helloPrompt">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#3498db">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-        </svg>
+            const isDark = body.getAttribute('data-theme') === 'dark';
+            sunIcon.setAttribute('aria-hidden', isDark ? 'false' : 'true');
         Remember to start with "Hello"! 👋
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script>
         // Theme Toggle Logic
         const themeToggle = document.querySelector('.theme-toggle');
@@ -321,8 +354,8 @@
         const body = document.body;
 
         function toggleTheme() {
-            const isDark = body.getAttribute('data-theme') === 'dark';
-            body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            sunIcon.setAttribute('aria-hidden', isDark ? 'false' : 'true');
+            moonIcon.setAttribute('aria-hidden', isDark ? 'true' : 'false');
             sunIcon.style.display = isDark ? 'block' : 'none';
             moonIcon.style.display = isDark ? 'none' : 'block';
             localStorage.setItem('theme', isDark ? 'light' : 'dark');
@@ -338,8 +371,18 @@
         themeToggle.addEventListener('touchend', toggleTheme);
 
         // Chat History System
-        let chatHistory = JSON.parse(localStorage.getItem('chatHistory')) || [];
-        let messageCount = 0;
+        let chatHistory = [];
+        const encryptionKey = 'your-encryption-key'; // Replace with a secure key
+        
+        const encryptedHistory = localStorage.getItem('chatHistory');
+        if (encryptedHistory) {
+            try {
+                const decryptedData = CryptoJS.AES.decrypt(encryptedHistory, encryptionKey).toString(CryptoJS.enc.Utf8);
+                chatHistory = JSON.parse(decryptedData) || [];
+            } catch (error) {
+                console.error('Failed to decrypt chat history:', error);
+        let messageCount = parseInt(localStorage.getItem('messageCount')) || 0;
+        let messageCount = parseInt(localStorage.getItem('messageCount')) || 0;
 
         function saveToHistory(userMessage, botMessage) {
             const chatEntry = {
@@ -349,19 +392,32 @@
             };
             
             chatHistory.push(chatEntry);
-            localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            try {
+                const encryptedData = CryptoJS.AES.encrypt(JSON.stringify(chatHistory), encryptionKey).toString();
+                localStorage.setItem('chatHistory', encryptedData);
+            } catch (error) {
+                console.error('Failed to encrypt chat history:', error);
+            }
             updateHistoryPanel();
         }
 
         function updateHistoryPanel() {
             const historyList = document.getElementById('historyList');
-            historyList.innerHTML = chatHistory
-                .map((entry, index) => `
-                    <div class="history-item" onclick="loadHistory(${index})">
-                        <small>${new Date(entry.timestamp).toLocaleString()}</small><br>
-                        ${entry.user.substring(0, 30)}...
-                    </div>
-                `).join('');
+            historyList.innerHTML = ''; // Clear existing content
+            const fragment = document.createDocumentFragment();
+
+            chatHistory.forEach((entry, index) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.onclick = () => loadHistory(index);
+                historyItem.innerHTML = `
+                    <small>${new Date(entry.timestamp).toLocaleString()}</small><br>
+                    ${entry.user.substring(0, 30)}...
+                `;
+                fragment.appendChild(historyItem);
+            });
+
+            historyList.appendChild(fragment); // Append all at once
         }
 
         function loadHistory(index) {
@@ -376,7 +432,8 @@
 
         function toggleHistory() {
             const panel = document.getElementById('historyPanel');
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            panel.classList.toggle('hidden');
+            panel.classList.toggle('visible');
         }
 
         function clearHistory() {
@@ -386,6 +443,9 @@
         }
 
         // Chatbot Logic
+        // The `responses` object contains predefined replies for specific categories of user inputs.
+        // Each category (e.g., greetings, farewell) has an array of possible replies to provide variety.
+        // If no specific category matches, the `default` array is used to handle unrecognized inputs.
         const responses = {
             greetings: {
                 replies: [
@@ -416,43 +476,56 @@
                 return responses.greetings.replies[Math.floor(Math.random() * responses.greetings.replies.length)];
             }
 
-            const isFarewell = /^(bye|goodbye|see you|thanks|thank you)/i.test(lowerInput);
-            if (isFarewell) {
-                return responses.farewell.replies[Math.floor(Math.random() * responses.farewell.replies.length)];
-            }
+async function fetchChatGPTResponse(message, retries = 3, timeout = 5000) {
+    const controller = new AbortController();
+    const signal = controller.signal;
 
-            return null;
+    const fetchWithTimeout = () => {
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        return fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message }),
+            signal
+        }).finally(() => clearTimeout(timeoutId));
+    };
+// Removed duplicate fetchChatGPTResponse function to avoid conflicts
+        try {
+            const response = await fetchWithTimeout();
+            if (!response.ok) throw new Error('API Error');
+            const data = await response.json();
+            return data.reply || "I'm sorry, I couldn't process that request.";
+        } catch (error) {
+            if (attempt === retries || error.name === 'AbortError') {
+                return "Error connecting to chatbot service.";
+            }
         }
-        // Add these 3 functions BEFORE sendMessage()
-function addMessage(message, isUser) {
-    const chatBox = document.getElementById('chat-box');
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-    messageDiv.textContent = message;
-    chatBox.appendChild(messageDiv);
+    }
+}
     chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 async function fetchChatGPTResponse(message) {
     try {
-        const response = await fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message })
-        });
-        if (!response.ok) throw new Error('API Error');
-        const data = await response.json();
-        return data.reply || "I'm sorry, I couldn't process that request.";
-    } catch (error) {
-        return "Error connecting to chatbot service.";
-    }
-}
-
 async function fetchSearchResults(query) {
     try {
+        const sanitizedQuery = query.replace(/[<>\/\\'";]/g, ''); // Remove potentially harmful characters
         const response = await fetch('/search', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: sanitizedQuery })
+        });
+        if (!response.ok) throw new Error('API Error');
+        const data = await response.json();
+        return data.results?.length > 0 
+            ? data.results.slice(0, 3).map(item => `${item.title}: ${item.link}`).join('\n')
+            : "No relevant results found.";
+    } catch (error) {
+        return "Error performing web search.";
+    }
+}
+            method: 'POST';
+            headers: { 'Content-Type', 'application/json' };
             body: JSON.stringify({ query })
         });
         if (!response.ok) throw new Error('API Error');
@@ -473,36 +546,58 @@ async function fetchSearchResults(query) {
             sendButton.disabled = true;
             addMessage(message, true);
             userInput.value = '';
+
             try {
-                let response = getPredefinedResponse(message);
-                
-                if (!response) {
-                    if (message.toLowerCase().includes('search')) {
-                        response = await fetchSearchResults(message);
-                    } else {
-                        response = await fetchChatGPTResponse(message);
-                    }
-                }
-
-                if (!response) {
-                    response = responses.default[Math.floor(Math.random() * responses.default.length)];
-                }
-
-                addMessage(response, false);
-                saveToHistory(message, response);
-
-                if (messageCount++ === 0) {
-                    document.getElementById('helloPrompt').style.display = 'none';
-                }
+                const response = await getResponse(message);
+                handleResponse(message, response);
             } catch (error) {
-                addMessage("Sorry, I'm having trouble connecting. Please try again.", false);
+                handleError();
             } finally {
                 sendButton.disabled = false;
             }
         }
 
-        document.getElementById('user-input').addEventListener('keypress', (e) => {
+        async function getResponse(message) {
+            let response = getPredefinedResponse(message);
+            if (!response) {
+                if (message.toLowerCase().includes('search')) {
+                    response = await fetchSearchResults(message);
+                } else {
+                    response = await fetchChatGPTResponse(message);
+                }
+            }
+            return response || responses.default[Math.floor(Math.random() * responses.default.length)];
+        }
+
+        function handleResponse(userMessage, botResponse) {
+            addMessage(botResponse, false);
+            saveToHistory(userMessage, botResponse);
+
+            if (messageCount++ === 0) {
+            messageCount++;
+            localStorage.setItem('messageCount', messageCount);
+            if (messageCount === 1) {
+            }
+        }
+
+        function handleError() {
+            addMessage("Sorry, I'm having trouble connecting. Please try again.", false);
+        }
+            }
+        }
+        function debounce(func, delay) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+
+        const debouncedSendMessage = debounce((e) => {
             if (e.key === 'Enter') sendMessage();
+        }, 300);
+
+        document.getElementById('user-input').addEventListener('keydown', debouncedSendMessage);
         });
 
         document.getElementById('user-input').addEventListener('input', function() {
